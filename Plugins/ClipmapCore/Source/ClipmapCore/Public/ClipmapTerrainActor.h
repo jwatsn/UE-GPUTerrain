@@ -44,6 +44,9 @@ class CLIPMAPCORE_API AClipmapTerrainActor : public AActor
 	UPROPERTY()
 	bool bClipmapMeshDirty = true;
 	bool bWindowTextureDirty = true;
+
+	int WindowSize = 256;
+
 public:
 	UPROPERTY(BlueprintReadWrite, EditInstanceOnly)
 	int TileSize = 64;

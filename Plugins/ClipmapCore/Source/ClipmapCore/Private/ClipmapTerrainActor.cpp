@@ -194,7 +194,6 @@ void AClipmapTerrainActor::UpdateClipmap()
 	{
 		CrossMeshInstance->UpdateInstanceTransformById(CrossInstanceID, FTransform(FRotator::ZeroRotator, FVector(snappedPos) * EXTRA_SCALE, FVector(EXTRA_SCALE, EXTRA_SCALE, 1)), true);
 	}
-	float maxX = 0, maxY = 0, minX = 0, minY = 0;
 	for (int32 i = 0; i < NUM_CLIPMAP_LEVELS * 16; i++)
 	{
 		const int32 level = i / 16;
@@ -215,22 +214,7 @@ void AClipmapTerrainActor::UpdateClipmap()
 		const FVector base = FVector(snappedPos.X, snappedPos.Y, 0) - tileSize * 2;
 		const FVector fill = FVector(x >= 2 ? 1 : 0, y >= 2 ? 1 : 0, 0) * scale;
 		const FVector tile_bl = base + FVector(x, y, 0) * tileSize + fill;
-		if (tile_bl.X > maxX)
-		{
-			maxX = tile_bl.X;
-		}
-		if (tile_bl.Y > maxY)
-		{
-			maxY = tile_bl.Y;
-		}
-		if (tile_bl.X < minX)
-		{
-			minX = tile_bl.X;
-		}
-		if (tile_bl.Y < minY)
-		{
-			minY = tile_bl.Y;
-		}
+		
 		FPrimitiveInstanceId& idEntry = TileMap[i];
 		if (idEntry.IsValid())
 		{
@@ -249,11 +233,6 @@ void AClipmapTerrainActor::UpdateClipmap()
 		snappedPos = FVector(FMath::Floor(ViewPosition.X / scale), FMath::Floor(ViewPosition.Y / scale), 0.0f) * scale;
 
 		bool firstLevel = level == 0;
-
-
-
-
-
 
 		FPrimitiveInstanceId& fillerIdEntry = Fillers[level];
 		if (fillerIdEntry.IsValid())
@@ -330,7 +309,7 @@ FVector AClipmapTerrainActor::GetLocalCameraLocation() const
 
 void AClipmapTerrainActor::CreateWindowTexture()
 {
-	WindowTexture = UTexture2D::CreateTransient(256, 256, PF_G16);
+	WindowTexture = UTexture2D::CreateTransient(WindowSize, WindowSize, PF_G16);
 
 	UpdateParameters();
 }
