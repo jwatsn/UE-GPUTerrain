@@ -96,6 +96,11 @@ void FClipmapActorDetailsCustomization::ImportPNGHeightmap(UTerrainAsset* Asset,
     }
     const int bitDepth = ImageWrapper->GetBitDepth();
     const ERGBFormat format = ImageWrapper->GetFormat();
+    if (format == ERGBFormat::Invalid)
+    {
+        UE_LOG(LogClipmapCore, Error, TEXT("Error importing heightmap: Invalid image format"));
+        return;
+    }
     UE_LOG(LogClipmapCore, Log, TEXT("Format: %d BitDepth: %d"), (int)format, bitDepth);
     
     TArray<uint8> cookData;
@@ -106,7 +111,49 @@ void FClipmapActorDetailsCustomization::ImportPNGHeightmap(UTerrainAsset* Asset,
     }
     FString pathPart, filenamePart, extensionPart;
     FPaths::Split(path, pathPart, filenamePart, extensionPart);
-    UTexture2D* newTexture = NewObject<UTexture2D>(Asset, *filenamePart);
+
+    const int32 width = ImageWrapper->GetWidth();
+    const int32 height = ImageWrapper->GetHeight();
+
+    TArray64<uint16>& Heights = Asset->Heights;
+    Heights.SetNum(width * height);
+    switch (format)
+    {
+    case ERGBFormat::Gray:
+        if (bitDepth == 8)
+        {
+            for (int i = 0; i < cookData.Num(); i++)
+            {
+                Heights[i] = cookData[i] / 255.0 * UINT16_MAX;
+            }
+        }
+        else if (bitDepth == 16)
+        {
+            const uint16* rawImageData16 = (uint16*)cookData.GetData();
+            uint16* heightData = Heights.GetData();
+            FMemory::Memcpy(heightData, rawImageData16, cookData.Num());
+        }
+    default:
+        if (bitDepth == 8)
+        {
+            const FColor* colorData = (FColor*)cookData.GetData();
+            for (int i = 0; i < width * height; i++)
+            {
+                Heights[i] = colorData[i].R / 255.0 * UINT16_MAX;
+            }
+        }
+        else if (bitDepth == 16)
+        {
+            const FLinearColor* colorData = (FLinearColor*)cookData.GetData();
+            for (int i = 0; i < width * height; i++)
+            {
+                Heights[i] = colorData[i].R * UINT16_MAX;
+            }
+        }
+    }
+
+
+    /*UTexture2D* newTexture = NewObject<UTexture2D>(Asset, *filenamePart);
     Asset->HeightmapTexture = newTexture;
 
     newTexture->CompressionSettings = TextureCompressionSettings::TC_Grayscale;
@@ -125,6 +172,6 @@ void FClipmapActorDetailsCustomization::ImportPNGHeightmap(UTerrainAsset* Asset,
     case 16:
         newTexture->GetPlatformData()->PixelFormat = EPixelFormat::PF_G16;
         break;
-    }
+    }*/
     
 }

@@ -10,6 +10,8 @@ struct FClipRotation
 	FVector Offset;
 };
 
+class UTerrainAsset;
+
 UCLASS()
 class CLIPMAPCORE_API AClipmapTerrainActor : public AActor
 {
@@ -23,7 +25,7 @@ class CLIPMAPCORE_API AClipmapTerrainActor : public AActor
 	TArray<FPrimitiveInstanceId> Seams;
 
 	//Reusable rotation data for static mesh instances
-	TArray<FClipRotation> Rotations;
+	FClipRotation Rotations[4];
 
 	UPROPERTY()
 	TObjectPtr<UInstancedStaticMeshComponent> CrossMeshInstance;
@@ -37,20 +39,33 @@ class CLIPMAPCORE_API AClipmapTerrainActor : public AActor
 	TObjectPtr<UInstancedStaticMeshComponent> SeamMeshInstance;
 
 	UPROPERTY()
-	bool bClipmapMeshDirty = true;
+	TObjectPtr<UMaterialInstanceDynamic> DynamicMaterial;
 
+	UPROPERTY()
+	bool bClipmapMeshDirty = true;
+	bool bWindowTextureDirty = true;
 public:
 	UPROPERTY(BlueprintReadWrite, EditInstanceOnly)
 	int TileSize = 64;
 
 	UPROPERTY(BlueprintReadWrite, EditInstanceOnly)
 	int ClipmapLevels = 8;
+
+	UPROPERTY(BlueprintReadOnly,EditAnywhere, Transient)
+	TObjectPtr<UTexture2D> WindowTexture;
+
+	UPROPERTY(BlueprintReadWrite, EditInstanceOnly)
+	TObjectPtr<UTerrainAsset> TerrainAsset;
+
+	UPROPERTY(BlueprintReadWrite, EditInstanceOnly)
+	TObjectPtr<UMaterialInterface> Material;
 public:
 	AClipmapTerrainActor();
 protected:
 
 	virtual void BeginPlay() override;
 #if WITH_EDITOR
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& event) override;
 	virtual void OnConstruction(const FTransform& transform) override;
 	virtual bool ShouldTickIfViewportsOnly() const override { return true; };
 #endif
@@ -58,8 +73,10 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 
 private:
-
-	void GenerateClipmapMesh();
+	void CreateDynamicMaterial();
+	void CreateWindowTexture();
+	void CreateClipmapMesh();
 	void UpdateClipmap();
+	void UpdateParameters();
 	FVector GetLocalCameraLocation() const;
 };

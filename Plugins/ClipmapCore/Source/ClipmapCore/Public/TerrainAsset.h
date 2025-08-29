@@ -22,10 +22,11 @@ class CLIPMAPCORE_API UTerrainAsset : public UDataAsset
 {
 	GENERATED_BODY()
 
+	
+
 public:
 
-	UPROPERTY(BlueprintReadWrite,EditDefaultsOnly)
-	TObjectPtr<UTexture2D> HeightmapTexture;
+	TArray64<uint16> Heights;
 
 
 protected:
@@ -33,5 +34,5 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& propertyChanged) override;
 #endif
 
-
+	virtual void Serialize(FArchive& Ar) override;
 };

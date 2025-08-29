@@ -57,6 +57,26 @@ AClipmapTerrainActor::AClipmapTerrainActor()
 	FillerMeshInstance->SetupAttachment(RootComponent);
 	TileMeshInstance->SetupAttachment(RootComponent);
 	CrossMeshInstance->SetupAttachment(RootComponent);
+
+	Rotations[0].Angle = 0.0f;
+	Rotations[0].Offset.X = 0.0f;
+	Rotations[0].Offset.Y = 0.0f;
+	Rotations[0].Offset.Z = 0.0f;
+
+	Rotations[1].Angle = 90.0f;
+	Rotations[1].Offset.X = 1.0;
+	Rotations[1].Offset.Y = 0.0f;
+	Rotations[1].Offset.Z = 0.0f;
+
+	Rotations[2].Angle = 270.0f;
+	Rotations[2].Offset.X = 0.0f;
+	Rotations[2].Offset.Y = 1.0;
+	Rotations[2].Offset.Z = 0.0f;
+
+	Rotations[3].Angle = 180.0f;
+	Rotations[3].Offset.X = 1.0;
+	Rotations[3].Offset.Y = 1.0;
+	Rotations[3].Offset.Z = 0.0f;
 }
 
 void AClipmapTerrainActor::BeginPlay()
@@ -71,26 +91,34 @@ void AClipmapTerrainActor::OnConstruction(const FTransform& transform)
 	if (bClipmapMeshDirty)
 	{
 		bClipmapMeshDirty = false;
-		GenerateClipmapMesh();
+		CreateClipmapMesh();
 	}
+}
+
+void AClipmapTerrainActor::PostEditChangeProperty(FPropertyChangedEvent& event)
+{
+	Super::PostEditChangeProperty(event);
+
+	if (event.GetPropertyName() == "Material" && Material)
+	{
+		CreateDynamicMaterial();
+	}
+
 }
 #endif
 
 //Clears the SMIs and recreates the meshes needed
-void AClipmapTerrainActor::GenerateClipmapMesh()
+void AClipmapTerrainActor::CreateClipmapMesh()
 {
-	Rotations.SetNum(4);
-
 	TileMap.Reset();
 	Fillers.Reset();
 	Trims.Reset();
 	Seams.Reset();
 	const int32 NUM_CLIPMAP_LEVELS = ClipmapLevels;
+
 	TileMap.SetNum(NUM_CLIPMAP_LEVELS * 16);
 	Fillers.SetNum(NUM_CLIPMAP_LEVELS);
-
 	Trims.SetNum(NUM_CLIPMAP_LEVELS);
-
 	Seams.SetNum(NUM_CLIPMAP_LEVELS);
 
 	CrossMeshInstance->ClearInstances();
@@ -98,15 +126,41 @@ void AClipmapTerrainActor::GenerateClipmapMesh()
 	FillerMeshInstance->ClearInstances();
 	TrimMeshInstance->ClearInstances();
 	SeamMeshInstance->ClearInstances();
+
 	CrossMeshInstance->SetStaticMesh(ClipmapBuilder::CrossMesh(TileSize));
 	TileMeshInstance->SetStaticMesh(ClipmapBuilder::TileMesh(TileSize));
 	FillerMeshInstance->SetStaticMesh(ClipmapBuilder::FillerMesh(TileSize));
 	TrimMeshInstance->SetStaticMesh(ClipmapBuilder::TrimMesh(TileSize));
 	SeamMeshInstance->SetStaticMesh(ClipmapBuilder::SeamMesh(TileSize));
 
+	CreateDynamicMaterial();
+
 	CrossInstanceID = FPrimitiveInstanceId();
 }
+void AClipmapTerrainActor::CreateDynamicMaterial()
+{
+	if (!Material)
+	{
+		return;
+	}
+	DynamicMaterial = UMaterialInstanceDynamic::Create(Material, this);
 
+	CrossMeshInstance->SetMaterial(0, DynamicMaterial);
+	TileMeshInstance->SetMaterial(0, DynamicMaterial);
+	FillerMeshInstance->SetMaterial(0, DynamicMaterial);
+	TrimMeshInstance->SetMaterial(0, DynamicMaterial);
+	SeamMeshInstance->SetMaterial(0, DynamicMaterial);
+
+	UpdateParameters();
+}
+void AClipmapTerrainActor::UpdateParameters()
+{
+	if (!DynamicMaterial)
+	{
+		return;
+	}
+	DynamicMaterial->SetTextureParameterValue("WindowTexture", WindowTexture);
+}
 void AClipmapTerrainActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -115,6 +169,12 @@ void AClipmapTerrainActor::Tick(float DeltaTime)
 }
 void AClipmapTerrainActor::UpdateClipmap()
 {
+
+	if (!WindowTexture)
+	{
+		CreateWindowTexture();
+	}
+
 	const int32 EXTRA_SCALE = 100;
 	const int TILE_RESOLUTION = TileSize;
 	const int CLIPMAP_RESOLUTION = TILE_RESOLUTION * 4 + 1;
@@ -187,8 +247,6 @@ void AClipmapTerrainActor::UpdateClipmap()
 	{
 		const int32 scale = EXTRA_SCALE << level;
 		snappedPos = FVector(FMath::Floor(ViewPosition.X / scale), FMath::Floor(ViewPosition.Y / scale), 0.0f) * scale;
-		//const FVector tileSize = FVector(TILE_RESOLUTION * EXTRA_SCALE << level, TILE_RESOLUTION * EXTRA_SCALE << level, 0);
-
 
 		bool firstLevel = level == 0;
 
@@ -223,24 +281,10 @@ void AClipmapTerrainActor::UpdateClipmap()
 			r |= d.Y >= scale ? 0 : 1;
 			const int offset = CLIPMAP_VERT_RESOLUTION * scale;
 
-			Rotations[0].Angle = 0.0f;
-			Rotations[0].Offset.X = 0.0f;
-			Rotations[0].Offset.Y = 0.0f;
-
-			Rotations[1].Angle = 90.0f;
-			Rotations[1].Offset.X = offset;
-			Rotations[1].Offset.Y = 0.0f;
-
-			Rotations[2].Angle = 270.0f;
-			Rotations[2].Offset.X = 0.0f;
-			Rotations[2].Offset.Y = offset;
-
-			Rotations[3].Angle = 180.0f;
-			Rotations[3].Offset.X = offset;
-			Rotations[3].Offset.Y = offset;
+			
 
 			const FVector next_base = next_snapped_position - FVector(TILE_RESOLUTION * EXTRA_SCALE << (level + 1), TILE_RESOLUTION * EXTRA_SCALE << (level + 1), 0);
-			const FVector trimPos = FVector(next_base.X + Rotations[r].Offset.Y, next_base.Y + Rotations[r].Offset.X, 0);
+			const FVector trimPos = next_base + Rotations[r].Offset * offset;
 
 			FPrimitiveInstanceId& trimIdEntry = Trims[level];
 			if (trimIdEntry.IsValid())
@@ -282,4 +326,11 @@ FVector AClipmapTerrainActor::GetLocalCameraLocation() const
 	}
 #endif
 	return GetActorLocation();
+}
+
+void AClipmapTerrainActor::CreateWindowTexture()
+{
+	WindowTexture = UTexture2D::CreateTransient(256, 256, PF_G16);
+
+	UpdateParameters();
 }
