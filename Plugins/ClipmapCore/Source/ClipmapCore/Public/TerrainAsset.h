@@ -24,6 +24,9 @@ class CLIPMAPCORE_API UTerrainAsset : public UDataAsset
 
 public:
 
+	UPROPERTY(BlueprintReadWrite,EditDefaultsOnly)
+	TObjectPtr<UTexture2D> HeightmapTexture;
+
 
 protected:
 #if WITH_EDITOR

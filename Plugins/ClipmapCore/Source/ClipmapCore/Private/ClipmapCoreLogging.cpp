@@ -1,4 +1,4 @@
 #include "ClipmapCoreLogging.h"
 
-DEFINE_LOG_CATEGORY(ClipmapCoreLog);
+DEFINE_LOG_CATEGORY(LogClipmapCore);
 
