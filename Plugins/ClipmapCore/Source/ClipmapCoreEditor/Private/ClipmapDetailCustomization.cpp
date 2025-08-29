@@ -5,7 +5,7 @@
 #include "IDesktopPlatform.h"
 #include "IImageWrapperModule.h"
 #include "DesktopPlatformModule.h"
-#include "ClipmapTerrainActor.h"
+#include "TerrainAsset.h"
 
 TSharedRef<IDetailCustomization> FClipmapActorDetailsCustomization::MakeInstance()
 {
@@ -21,7 +21,7 @@ void FClipmapActorDetailsCustomization::CustomizeDetails(IDetailLayoutBuilder& D
     if (ObjectsBeingCustomized.Num() == 1)
     {
         
-        if (AClipmapTerrainActor* ClipmapActor = Cast<AClipmapTerrainActor>(ObjectsBeingCustomized[0].Get()))
+        if (UTerrainAsset* Asset = Cast<UTerrainAsset>(ObjectsBeingCustomized[0].Get()))
         {
             IDetailCategoryBuilder& Category = DetailBuilder.EditCategory("External File");
 
@@ -30,21 +30,21 @@ void FClipmapActorDetailsCustomization::CustomizeDetails(IDetailLayoutBuilder& D
                 [
                     SNew(SButton)
                         .Text(FText::FromString("Open File"))
-                        .OnClicked_Lambda([&,ClipmapActor]()
+                        .OnClicked_Lambda([&, Asset]()
                             {
                                 IDesktopPlatform* DesktopPlatform = FDesktopPlatformModule::Get();
                                 if (DesktopPlatform)
                                 {
                                     const void* ParentWindowHandle = FSlateApplication::Get().FindBestParentWindowHandleForDialogs(nullptr);
 
-                                    FString FileTypes = TEXT("All Files (*.*)|*.*");
+                                    FString FileTypes = TEXT("Heightmap Files (*.png)|*.png");
                                     TArray<FString> OutFiles;
 
                                     bool bOpened = DesktopPlatform->OpenFileDialog(
                                         ParentWindowHandle,
                                         TEXT("Choose File to Open"),
                                         TEXT(""),   // default path
-                                        TEXT("png"),   // default file
+                                        TEXT(""),   // default file
                                         FileTypes,
                                         EFileDialogFlags::None,
                                         OutFiles
@@ -52,7 +52,7 @@ void FClipmapActorDetailsCustomization::CustomizeDetails(IDetailLayoutBuilder& D
 
                                     if (bOpened && OutFiles.Num() > 0)
                                     {
-                                        ImportPNGHeightmap(ClipmapActor,OutFiles[0]);
+                                        ImportPNGHeightmap(Asset,OutFiles[0]);
                                     }
                                 }
                                 return FReply::Handled();
@@ -62,7 +62,7 @@ void FClipmapActorDetailsCustomization::CustomizeDetails(IDetailLayoutBuilder& D
     }
 }
 
-void FClipmapActorDetailsCustomization::ImportPNGHeightmap(AClipmapTerrainActor* ClipmapActor, const FString& path)
+void FClipmapActorDetailsCustomization::ImportPNGHeightmap(UTerrainAsset* ClipmapActor, const FString& path)
 {
     static IImageWrapperModule* ImageWrapperModule = FModuleManager::LoadModulePtr<IImageWrapperModule>("ImageWrapper");
 }

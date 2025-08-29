@@ -3,7 +3,7 @@
 #include "IDetailCustomization.h"
 
 class IDetailLayoutBuilder;
-class AClipmapTerrainActor;
+class UTerrainAsset;
 //////////////////////////////////////////////////////////////////////////
 // FClipmapActorDetailsCustomization
 
@@ -17,5 +17,5 @@ public:
 	virtual void CustomizeDetails(IDetailLayoutBuilder& DetailLayout) override;
 	// End of IDetailCustomization interface
 
-	void ImportPNGHeightmap(AClipmapTerrainActor* ClipmapActor,const FString& path);
+	void ImportPNGHeightmap(UTerrainAsset* Asset,const FString& path);
 };

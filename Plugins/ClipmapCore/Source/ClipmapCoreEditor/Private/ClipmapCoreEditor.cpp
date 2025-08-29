@@ -9,7 +9,7 @@ void FClipmapCoreEditor::StartupModule()
 {
     FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
     PropertyModule.RegisterCustomClassLayout(
-        "ClipmapTerrainActor",
+        "TerrainAsset",
         FOnGetDetailCustomizationInstance::CreateStatic(&FClipmapActorDetailsCustomization::MakeInstance)
     );
 }
@@ -19,6 +19,6 @@ void FClipmapCoreEditor::ShutdownModule()
     if (FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
     {
         FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
-        PropertyModule.UnregisterCustomClassLayout("ClipmapTerrainActor");
+        PropertyModule.UnregisterCustomClassLayout("TerrainAsset");
     }
 }
