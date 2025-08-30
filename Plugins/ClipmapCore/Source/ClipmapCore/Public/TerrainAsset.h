@@ -22,12 +22,22 @@ class CLIPMAPCORE_API UTerrainAsset : public UDataAsset
 {
 	GENERATED_BODY()
 
-	
+	int Width = 0;
+	int Height = 0;
 
 public:
 
 	TArray64<uint16> Heights;
 
+public:
+	void UpdateWindowTexture(int x, int y, UTexture2D* windowTexture);
+	int32 GetWidth() const { return Width; };
+	int32 GetHeight() const { return Height; };
+	void SetSize(int32 width, int32 height)
+	{
+		Width = width;
+		Height = height;
+	}
 
 protected:
 #if WITH_EDITOR

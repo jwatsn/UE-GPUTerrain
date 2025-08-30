@@ -27,41 +27,52 @@ class CLIPMAPCORE_API AClipmapTerrainActor : public AActor
 	//Reusable rotation data for static mesh instances
 	FClipRotation Rotations[4];
 
-	UPROPERTY()
-	TObjectPtr<UInstancedStaticMeshComponent> CrossMeshInstance;
-	UPROPERTY()
-	TObjectPtr<UInstancedStaticMeshComponent> TileMeshInstance;
-	UPROPERTY()
-	TObjectPtr<UInstancedStaticMeshComponent> FillerMeshInstance;
-	UPROPERTY()
-	TObjectPtr<UInstancedStaticMeshComponent> TrimMeshInstance;
-	UPROPERTY()
-	TObjectPtr<UInstancedStaticMeshComponent> SeamMeshInstance;
+	
 
 	UPROPERTY()
 	TObjectPtr<UMaterialInstanceDynamic> DynamicMaterial;
 
-	UPROPERTY()
 	bool bClipmapMeshDirty = true;
 	bool bWindowTextureDirty = true;
+	bool bFirstUpdate = false;
+	FVector LastSnapped;
+	FVector LastViewPosition;
+	int WindowSize = 512;
 
-	int WindowSize = 256;
+
 
 public:
-	UPROPERTY(BlueprintReadWrite, EditInstanceOnly)
-	int TileSize = 64;
 
-	UPROPERTY(BlueprintReadWrite, EditInstanceOnly)
+	UPROPERTY()
+	TObjectPtr<UInstancedStaticMeshComponent> CrossMeshInstance;
+	UPROPERTY()
+	TObjectPtr<UInstancedStaticMeshComponent> TileMeshInstance;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<UInstancedStaticMeshComponent> FillerMeshInstance;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<UInstancedStaticMeshComponent> TrimMeshInstance;
+	UPROPERTY()
+	TObjectPtr<UInstancedStaticMeshComponent> SeamMeshInstance;
+	UPROPERTY(BlueprintReadWrite, EditInstanceOnly, Category="Clipmap Settings")
+	int TileSize = 63;
+
+	UPROPERTY(BlueprintReadWrite, EditInstanceOnly, Category = "Clipmap Settings")
 	int ClipmapLevels = 8;
+
+	UPROPERTY(BlueprintReadWrite, EditInstanceOnly, Category = "Clipmap Settings")
+	int ClipmapScale = 100;
 
 	UPROPERTY(BlueprintReadOnly,EditAnywhere, Transient)
 	TObjectPtr<UTexture2D> WindowTexture;
 
-	UPROPERTY(BlueprintReadWrite, EditInstanceOnly)
+	UPROPERTY(BlueprintReadWrite, EditInstanceOnly, Category = "Terrain Settings")
 	TObjectPtr<UTerrainAsset> TerrainAsset;
 
-	UPROPERTY(BlueprintReadWrite, EditInstanceOnly)
+	UPROPERTY(BlueprintReadWrite, EditInstanceOnly, Category = "Terrain Settings")
 	TObjectPtr<UMaterialInterface> Material;
+
+	UPROPERTY(BlueprintReadWrite, EditInstanceOnly, Category = "Terrain Settings")
+	FVector TerrainScale = FVector(100, 100, 100);
 public:
 	AClipmapTerrainActor();
 protected:
@@ -81,5 +92,6 @@ private:
 	void CreateClipmapMesh();
 	void UpdateClipmap();
 	void UpdateParameters();
+	void UpdateWindowTexture();
 	FVector GetLocalCameraLocation() const;
 };

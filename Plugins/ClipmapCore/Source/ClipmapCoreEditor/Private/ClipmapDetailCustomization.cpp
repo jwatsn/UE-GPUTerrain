@@ -65,6 +65,9 @@ void FClipmapActorDetailsCustomization::CustomizeDetails(IDetailLayoutBuilder& D
 
 void FClipmapActorDetailsCustomization::ImportPNGHeightmap(UTerrainAsset* Asset, const FString& path)
 {
+    //Make sure nothing weird happens if png import error happens on an asset that already has valid data.
+    Asset->SetSize(0, 0);
+
     static IImageWrapperModule* ImageWrapperModule = FModuleManager::LoadModulePtr<IImageWrapperModule>("ImageWrapper");
 
     if (ImageWrapperModule == nullptr)
@@ -133,6 +136,7 @@ void FClipmapActorDetailsCustomization::ImportPNGHeightmap(UTerrainAsset* Asset,
             uint16* heightData = Heights.GetData();
             FMemory::Memcpy(heightData, rawImageData16, cookData.Num());
         }
+        break;
     default:
         if (bitDepth == 8)
         {
@@ -150,8 +154,10 @@ void FClipmapActorDetailsCustomization::ImportPNGHeightmap(UTerrainAsset* Asset,
                 Heights[i] = colorData[i].R * UINT16_MAX;
             }
         }
+        break;
     }
 
+    Asset->SetSize(width, height);
 
     /*UTexture2D* newTexture = NewObject<UTexture2D>(Asset, *filenamePart);
     Asset->HeightmapTexture = newTexture;

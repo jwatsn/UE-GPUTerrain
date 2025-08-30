@@ -1,5 +1,6 @@
 #include "ClipmapTerrainActor.h"
 #include "ClipmapBuilder.h"
+#include "TerrainAsset.h"
 #if WITH_EDITOR
 #include "Editor.h"
 #include "LevelEditorViewport.h"
@@ -103,6 +104,14 @@ void AClipmapTerrainActor::PostEditChangeProperty(FPropertyChangedEvent& event)
 	{
 		CreateDynamicMaterial();
 	}
+	else if (event.GetPropertyName() == "TerrainScale" && DynamicMaterial)
+	{
+		UpdateParameters();
+	}
+	else if (event.GetPropertyName() == "TerrainAsset")
+	{
+		bWindowTextureDirty = true;
+	}
 
 }
 #endif
@@ -136,6 +145,8 @@ void AClipmapTerrainActor::CreateClipmapMesh()
 	CreateDynamicMaterial();
 
 	CrossInstanceID = FPrimitiveInstanceId();
+
+	bFirstUpdate = true;
 }
 void AClipmapTerrainActor::CreateDynamicMaterial()
 {
@@ -153,6 +164,15 @@ void AClipmapTerrainActor::CreateDynamicMaterial()
 
 	UpdateParameters();
 }
+void AClipmapTerrainActor::CreateWindowTexture()
+{
+	WindowTexture = UTexture2D::CreateTransient(WindowSize, WindowSize, PF_G16);
+	WindowTexture->SRGB = false;
+	WindowTexture->CompressionSettings = TextureCompressionSettings::TC_Masks;
+	WindowTexture->MipGenSettings = TextureMipGenSettings::TMGS_NoMipmaps;
+	WindowTexture->UpdateResource();
+	UpdateParameters();
+}
 void AClipmapTerrainActor::UpdateParameters()
 {
 	if (!DynamicMaterial)
@@ -160,22 +180,28 @@ void AClipmapTerrainActor::UpdateParameters()
 		return;
 	}
 	DynamicMaterial->SetTextureParameterValue("WindowTexture", WindowTexture);
+	FVector scale = TerrainScale * WindowSize;
+
+	DynamicMaterial->SetVectorParameterValue("Scale", scale);
 }
 void AClipmapTerrainActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
 	UpdateClipmap();
+
+	if (bWindowTextureDirty)
+	{
+		bWindowTextureDirty = false;
+		UpdateWindowTexture();
+	}
 }
 void AClipmapTerrainActor::UpdateClipmap()
 {
 
-	if (!WindowTexture)
-	{
-		CreateWindowTexture();
-	}
+	
 
-	const int32 EXTRA_SCALE = 100;
+	const int32 EXTRA_SCALE = ClipmapScale;
 	const int TILE_RESOLUTION = TileSize;
 	const int CLIPMAP_RESOLUTION = TILE_RESOLUTION * 4 + 1;
 	const int CLIPMAP_VERT_RESOLUTION = CLIPMAP_RESOLUTION + 1;
@@ -184,6 +210,17 @@ void AClipmapTerrainActor::UpdateClipmap()
 
 	FVector snappedPos = FVector(FMath::Floor(ViewPosition.X / EXTRA_SCALE), FMath::Floor(ViewPosition.Y / EXTRA_SCALE), 0);
 
+	if (snappedPos != LastSnapped || bFirstUpdate)
+	{
+		bFirstUpdate = false;
+		LastSnapped = snappedPos;
+		bWindowTextureDirty = true;
+		LastViewPosition = ViewPosition;
+	}
+	else
+	{
+		return;
+	}
 
 
 	if (!CrossInstanceID.IsValid())
@@ -289,6 +326,35 @@ void AClipmapTerrainActor::UpdateClipmap()
 		}
 	}
 }
+void AClipmapTerrainActor::UpdateWindowTexture()
+{
+	if (!WindowTexture)
+	{
+		CreateWindowTexture();
+	}
+	if (!WindowTexture)
+	{
+		//Something went wrong.
+		return;
+	}
+	if (!TerrainAsset)
+	{
+		//Terrain asset hasn't been set through editor yet.
+		return;
+	}
+	const FVector windowSize = FVector(WindowSize, WindowSize, 0);
+	const FVector terrainSize = FVector(TerrainAsset->GetWidth(), TerrainAsset->GetHeight(), 0);
+	const FVector terrainSizeHalf = terrainSize/2.0;
+	const FVector scaledViewPos = (LastViewPosition / TerrainScale) - windowSize/2.0;
+	const int x = FMath::FloorToInt(scaledViewPos.X);
+	const int y = FMath::FloorToInt(scaledViewPos.Y);
+
+	TerrainAsset->UpdateWindowTexture(x, y, WindowTexture);
+	if (DynamicMaterial)
+	{
+		DynamicMaterial->SetVectorParameterValue("Offset", LastViewPosition - (windowSize/2.0)*TerrainScale);
+	}
+}
 FVector AClipmapTerrainActor::GetLocalCameraLocation() const
 {
 	
@@ -307,9 +373,3 @@ FVector AClipmapTerrainActor::GetLocalCameraLocation() const
 	return GetActorLocation();
 }
 
-void AClipmapTerrainActor::CreateWindowTexture()
-{
-	WindowTexture = UTexture2D::CreateTransient(WindowSize, WindowSize, PF_G16);
-
-	UpdateParameters();
-}

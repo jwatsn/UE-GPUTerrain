@@ -38,7 +38,9 @@ public class ClipmapCore : ModuleRules
 				"Engine",
                 "MeshDescription",
                 "StaticMeshDescription",
-                "MeshConversion"
+                "MeshConversion",
+				"RHI",
+				"RenderCore"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
