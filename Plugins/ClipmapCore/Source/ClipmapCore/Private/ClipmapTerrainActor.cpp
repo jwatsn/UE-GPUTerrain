@@ -346,6 +346,7 @@ void AClipmapTerrainActor::UpdateWindowTexture()
 	if (!TerrainAsset)
 	{
 		//Terrain asset hasn't been set through editor yet.
+		bWindowTextureDirty = true;
 		return;
 	}
 	const FVector windowSize = FVector(WindowSize, WindowSize, 0);
@@ -353,7 +354,10 @@ void AClipmapTerrainActor::UpdateWindowTexture()
 	const int x = FMath::FloorToInt(scaledViewPos.X);
 	const int y = FMath::FloorToInt(scaledViewPos.Y);
 
-	TerrainAsset->UpdateWindowTexture(x, y, WindowTexture);
+	if (!TerrainAsset->UpdateWindowTexture(x, y, WindowTexture))
+	{
+		bWindowTextureDirty = true;
+	}
 	if (DynamicMaterial)
 	{
 		DynamicMaterial->SetVectorParameterValue("Offset", LastViewPosition - (windowSize/2.0)*TerrainScale);

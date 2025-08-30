@@ -30,7 +30,7 @@ public:
 	TArray64<uint16> Heights;
 
 public:
-	void UpdateWindowTexture(int x, int y, UTexture2D* windowTexture);
+	bool UpdateWindowTexture(int x, int y, UTexture2D* windowTexture);
 	int32 GetWidth() const { return Width; };
 	int32 GetHeight() const { return Height; };
 	void SetSize(int32 width, int32 height)

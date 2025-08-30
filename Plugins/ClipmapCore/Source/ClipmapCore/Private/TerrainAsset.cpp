@@ -7,11 +7,11 @@ void UTerrainAsset::PostEditChangeProperty(FPropertyChangedEvent& propertyChange
 
 }
 #endif
-void UTerrainAsset::UpdateWindowTexture(int x, int y, UTexture2D* windowTexture)
+bool UTerrainAsset::UpdateWindowTexture(int x, int y, UTexture2D* windowTexture)
 {
 	if (!windowTexture || !windowTexture->GetPlatformData() || windowTexture->GetPlatformData()->Mips.IsEmpty())
 	{
-		return;
+		return false;
 	}
 	const int windowWidth = windowTexture->GetSizeX();
 	const int windowHeight = windowTexture->GetSizeY();
@@ -26,7 +26,11 @@ void UTerrainAsset::UpdateWindowTexture(int x, int y, UTexture2D* windowTexture)
 	}
 	if (!TextureResource)
 	{
-		return;
+		return false;
+	}
+	if (!TextureResource->GetTexture2DRHI())
+	{
+		return false;
 	}
 	TArray<FUpdateTextureRegion2D> updateRegions;
 	int wrappedX = (wrappedX = X % Width) >= 0 ? wrappedX : Width + wrappedX;
@@ -83,6 +87,7 @@ void UTerrainAsset::UpdateWindowTexture(int x, int y, UTexture2D* windowTexture)
 					
 				});
 	}
+	return true;
 }
 void UTerrainAsset::Serialize(FArchive& Ar)
 {
