@@ -35,7 +35,6 @@ class CLIPMAPCORE_API AClipmapTerrainActor : public AActor
 	bool bClipmapMeshDirty = true;
 	bool bWindowTextureDirty = true;
 	bool bFirstUpdate = false;
-	FVector LastSnapped;
 	FVector LastViewPosition;
 	int WindowSize = 512;
 

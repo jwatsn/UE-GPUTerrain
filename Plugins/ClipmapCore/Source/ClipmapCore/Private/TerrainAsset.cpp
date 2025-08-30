@@ -16,6 +16,9 @@ void UTerrainAsset::UpdateWindowTexture(int x, int y, UTexture2D* windowTexture)
 	const int windowWidth = windowTexture->GetSizeX();
 	const int windowHeight = windowTexture->GetSizeY();
 
+	const int X = x - windowWidth / 2.0;
+	const int Y = y - windowHeight / 2.0;
+
 	FTexture2DResource* TextureResource = nullptr;
 	if (FTextureResource* resource = windowTexture->GetResource())
 	{
@@ -25,48 +28,58 @@ void UTerrainAsset::UpdateWindowTexture(int x, int y, UTexture2D* windowTexture)
 	{
 		return;
 	}
+	TArray<FUpdateTextureRegion2D> updateRegions;
+	int wrappedX = (wrappedX = X % Width) >= 0 ? wrappedX : Width + wrappedX;
+	int wrappedY = (wrappedY = Y % Height) >= 0 ? wrappedY : Height + wrappedY;
+
+	int offsetY = 0;
+	
+	while (offsetY < windowHeight)
+	{
+		const int sizeYLeft = windowHeight - offsetY;
+		const int sizeY = Height - wrappedY;
+		const int sizeYToAdd = FMath::Min(sizeYLeft, sizeY);
+		int offsetX = 0;
+		while (offsetX < windowWidth)
+		{
+
+			const int sizeXLeft = windowWidth - offsetX;
+			const int sizeX = Width - wrappedX;
+			const int sizeXToAdd = FMath::Min(sizeXLeft, sizeX);
+
+			const uint32 SrcStride = Width * sizeof(uint16);
+			//uint16* buffer = Heights.GetData() + (wrappedY * Width + wrappedX);
+			updateRegions.Add(FUpdateTextureRegion2D(offsetX, offsetY, wrappedX, wrappedY, sizeXToAdd, sizeYToAdd));
+			
+			offsetX += sizeXToAdd;
+			wrappedX = (wrappedX + sizeXToAdd) % Width;
+
+		}
+		offsetY += sizeYToAdd;
+		wrappedY = (wrappedY + sizeYToAdd) % Height;
+
+	}
 	if(TextureResource->GetTexture2DRHI())
 	{
 		ENQUEUE_RENDER_COMMAND(UpdateTextureRegionsData)
-			([&, TextureResource, WindowWidth = windowTexture->GetSizeX(), WindowHeight = windowTexture->GetSizeY(),X=x,Y=y](FRHICommandList& RHICmdList)
+			([TextureResource, Regions = MoveTemp(updateRegions),&heightData=Heights,stride=Width * sizeof(uint16)](FRHICommandList& RHICmdList)
 				{
-					int wrappedX = (wrappedX = X % Width) >= 0 ? wrappedX : Width + wrappedX;
-					int wrappedY = (wrappedY = Y % Height) >= 0 ? wrappedY : Height + wrappedY;
-					
-					int offsetY = 0;
-					FRHITexture* textureRHI = TextureResource->GetTexture2DRHI();
-					while (offsetY < WindowHeight)
+					if (FRHITexture* textureRHI = TextureResource->GetTexture2DRHI())
 					{
-						const int sizeYLeft = WindowHeight - offsetY;
-						const int sizeY = Height - wrappedY;
-						const int sizeYToAdd = FMath::Min(sizeYLeft, sizeY);
-						int offsetX = 0;
-						while (offsetX < WindowWidth)
+						for (const FUpdateTextureRegion2D& Region : Regions)
 						{
-							
-							const int sizeXLeft = WindowWidth - offsetX;
-							const int sizeX = Width - wrappedX;
-							const int sizeXToAdd = FMath::Min(sizeXLeft, sizeX);
-							
-							const uint32 SrcStride = Width * sizeof(uint16);
-							//uint16* buffer = Heights.GetData() + (wrappedY * Width + wrappedX);
-							const FUpdateTextureRegion2D Region(offsetX, offsetY, wrappedX, wrappedY, sizeXToAdd, sizeYToAdd);
 							RHIUpdateTexture2D(
 								textureRHI,
 								0, // Mip level
 								Region,
-								SrcStride,
-								reinterpret_cast<uint8*>(Heights.GetData())
+								stride,
+								reinterpret_cast<uint8*>(heightData.GetData())
 							);
-							UE_LOG(LogTemp, Log, TEXT("offsetX: %d offsetY: %d xToAdd: %d yToAdd: %d wrappedX: %d wrappedY: %d"), offsetX, offsetY, sizeXToAdd, sizeYToAdd, wrappedX, wrappedY);
-							offsetX += sizeXToAdd;
-							wrappedX = (wrappedX + sizeXToAdd) % Width;
-							
+
 						}
-						offsetY += sizeYToAdd;
-						wrappedY = (wrappedY + sizeYToAdd) % Height;
-						
 					}
+						
+						
 					
 				});
 	}

@@ -280,20 +280,22 @@ void InitTrimMesh(FMeshDescriptionBuilder& meshDescBuilder, FPolygonGroupID& pol
 	TArray< FVertexID > vertexIDs; vertexIDs.SetNum((CLIPMAP_VERT_RESOLUTION * 2 + 1) * 2);
 	int vertices_index = 0;
 
+	FVector offset = FVector(0.5 * (CLIPMAP_VERT_RESOLUTION + 1), 0.5 * (CLIPMAP_VERT_RESOLUTION + 1), 0);
+
 	for (int i = 0; i < CLIPMAP_VERT_RESOLUTION + 1; i++)
 	{
-		vertexIDs[vertices_index] = meshDescBuilder.AppendVertex(FVector(0, CLIPMAP_VERT_RESOLUTION - i, 1));
+		vertexIDs[vertices_index] = meshDescBuilder.AppendVertex(FVector(0, CLIPMAP_VERT_RESOLUTION - i, 1) - offset);
 		vertices_index += 1;
-		vertexIDs[vertices_index] = meshDescBuilder.AppendVertex(FVector(1, CLIPMAP_VERT_RESOLUTION - i, 1));
+		vertexIDs[vertices_index] = meshDescBuilder.AppendVertex(FVector(1, CLIPMAP_VERT_RESOLUTION - i, 1) - offset);
 		vertices_index += 1;
 	}
 	int start_of_horizontal = vertices_index;
 
 	for (int i = 0; i < CLIPMAP_VERT_RESOLUTION; i++)
 	{
-		vertexIDs[vertices_index] = meshDescBuilder.AppendVertex(FVector(i + 1, 0, 1));
+		vertexIDs[vertices_index] = meshDescBuilder.AppendVertex(FVector(i + 1, 0, 1) - offset);
 		vertices_index += 1;
-		vertexIDs[vertices_index] = meshDescBuilder.AppendVertex(FVector(i + 1, 1, 1));
+		vertexIDs[vertices_index] = meshDescBuilder.AppendVertex(FVector(i + 1, 1, 1) - offset);
 		vertices_index += 1;
 	}
 

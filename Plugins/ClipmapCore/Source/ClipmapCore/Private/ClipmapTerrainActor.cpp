@@ -64,12 +64,12 @@ AClipmapTerrainActor::AClipmapTerrainActor()
 	Rotations[0].Offset.Y = 0.0f;
 	Rotations[0].Offset.Z = 0.0f;
 
-	Rotations[1].Angle = 90.0f;
+	Rotations[1].Angle = 90.f;
 	Rotations[1].Offset.X = 1.0;
 	Rotations[1].Offset.Y = 0.0f;
 	Rotations[1].Offset.Z = 0.0f;
 
-	Rotations[2].Angle = 270.0f;
+	Rotations[2].Angle = 270.f;
 	Rotations[2].Offset.X = 0.0f;
 	Rotations[2].Offset.Y = 1.0;
 	Rotations[2].Offset.Z = 0.0f;
@@ -99,19 +99,24 @@ void AClipmapTerrainActor::OnConstruction(const FTransform& transform)
 void AClipmapTerrainActor::PostEditChangeProperty(FPropertyChangedEvent& event)
 {
 	Super::PostEditChangeProperty(event);
-
-	if (event.GetPropertyName() == "Material" && Material)
+	const FName& propertyName = event.GetPropertyName();
+	if (propertyName == "Material" && Material)
 	{
 		CreateDynamicMaterial();
 	}
-	else if (event.GetPropertyName() == "TerrainScale" && DynamicMaterial)
+	else if (propertyName == "TerrainScale" && DynamicMaterial)
 	{
 		UpdateParameters();
 	}
-	else if (event.GetPropertyName() == "TerrainAsset")
+	else if (propertyName == "TerrainAsset")
 	{
 		bWindowTextureDirty = true;
 	}
+	else if (propertyName == "TileSize" || propertyName == "ClipmapLevels")
+	{
+		CreateClipmapMesh();
+	}
+	
 
 }
 #endif
@@ -170,7 +175,10 @@ void AClipmapTerrainActor::CreateWindowTexture()
 	WindowTexture->SRGB = false;
 	WindowTexture->CompressionSettings = TextureCompressionSettings::TC_Masks;
 	WindowTexture->MipGenSettings = TextureMipGenSettings::TMGS_NoMipmaps;
+	
+	
 	WindowTexture->UpdateResource();
+	WindowTexture->GetPlatformData()->Mips.Add(new FTexture2DMipMap(WindowSize, WindowSize, 1));
 	UpdateParameters();
 }
 void AClipmapTerrainActor::UpdateParameters()
@@ -206,14 +214,13 @@ void AClipmapTerrainActor::UpdateClipmap()
 	const int CLIPMAP_RESOLUTION = TILE_RESOLUTION * 4 + 1;
 	const int CLIPMAP_VERT_RESOLUTION = CLIPMAP_RESOLUTION + 1;
 	const int NUM_CLIPMAP_LEVELS = ClipmapLevels;
-	const FVector ViewPosition = GetLocalCameraLocation();
+	const FVector ViewPosition = GetLocalCameraLocation().GridSnap(100);
 
-	FVector snappedPos = FVector(FMath::Floor(ViewPosition.X / EXTRA_SCALE), FMath::Floor(ViewPosition.Y / EXTRA_SCALE), 0);
+	
 
-	if (snappedPos != LastSnapped || bFirstUpdate)
+	if (ViewPosition != LastViewPosition || bFirstUpdate)
 	{
 		bFirstUpdate = false;
-		LastSnapped = snappedPos;
 		bWindowTextureDirty = true;
 		LastViewPosition = ViewPosition;
 	}
@@ -221,7 +228,7 @@ void AClipmapTerrainActor::UpdateClipmap()
 	{
 		return;
 	}
-
+	FVector snappedPos = FVector(FMath::Floor(ViewPosition.X / EXTRA_SCALE), FMath::Floor(ViewPosition.Y / EXTRA_SCALE), 0);
 
 	if (!CrossInstanceID.IsValid())
 	{
@@ -301,15 +308,14 @@ void AClipmapTerrainActor::UpdateClipmap()
 
 			const FVector next_base = next_snapped_position - FVector(TILE_RESOLUTION * EXTRA_SCALE << (level + 1), TILE_RESOLUTION * EXTRA_SCALE << (level + 1), 0);
 			const FVector trimPos = next_base + Rotations[r].Offset * offset;
-
 			FPrimitiveInstanceId& trimIdEntry = Trims[level];
 			if (trimIdEntry.IsValid())
 			{
-				TrimMeshInstance->UpdateInstanceTransformById(trimIdEntry, FTransform(FRotator(0.0f, -Rotations[r].Angle, 0.0f), trimPos, FVector(scale, scale, 1.0f)), true, false);
+				TrimMeshInstance->UpdateInstanceTransformById(trimIdEntry, FTransform(FRotator(0.0f, -Rotations[r].Angle, 0.0f), tile_centre, FVector(scale, scale, 1.0f)), true, false);
 			}
 			else
 			{
-				trimIdEntry = TrimMeshInstance->AddInstanceById(FTransform(FRotator(0.0f, -Rotations[r].Angle, 0.0f), trimPos, FVector(scale, scale, 1.0f)), true);
+				trimIdEntry = TrimMeshInstance->AddInstanceById(FTransform(FRotator(0.0f, -Rotations[r].Angle, 0.0f), tile_centre, FVector(scale, scale, 1.0f)), true);
 			}
 
 
@@ -343,9 +349,7 @@ void AClipmapTerrainActor::UpdateWindowTexture()
 		return;
 	}
 	const FVector windowSize = FVector(WindowSize, WindowSize, 0);
-	const FVector terrainSize = FVector(TerrainAsset->GetWidth(), TerrainAsset->GetHeight(), 0);
-	const FVector terrainSizeHalf = terrainSize/2.0;
-	const FVector scaledViewPos = (LastViewPosition / TerrainScale) - windowSize/2.0;
+	const FVector scaledViewPos = (LastViewPosition / TerrainScale);
 	const int x = FMath::FloorToInt(scaledViewPos.X);
 	const int y = FMath::FloorToInt(scaledViewPos.Y);
 
